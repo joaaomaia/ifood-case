@@ -1,0 +1,41 @@
+# ===========================
+# Requirements for iFood Case (Local VS Code)
+# ===========================
+# Este arquivo cobre:
+# - ETL com PySpark
+# - Modelagem (sklearn / GBMs)
+# - Utilitários adicionais
+# Obs: pacotes já garantidos via environment.yml (numpy, pandas, pyarrow, fastparquet,
+#      scipy, jupyterlab, ipykernel, matplotlib, plotly) não estão listados aqui.
+
+
+# --- Core ETL (PySpark) ---
+pyspark>=3.5,<4.1          # Spark 3.5 LTS ou 4.0.x (pip resolve a melhor versão)
+
+
+# --- ML stack (Modelagem) ---
+scikit-learn>=1.4,<1.8
+xgboost>=2.0,<4
+lightgbm>=4.3,<5.1
+imbalanced-learn>=0.12,<0.14
+optuna>=3.5,<4
+optuna-integration[catboost]
+catboost
+shap
+optbinning
+
+
+# --- Utilitários ---
+tqdm>=4.66,<5
+python-dotenv>=1.0,<2
+pyyaml>=6,<7
+orjson>=3.9,<4
+openpyxl
+seaborn
+
+
+# --- Apresentação (máx. 5 slides) ---
+# python-pptx>=0.6,<0.7
+nbformat>=5.10,<6
+nbconvert>=7.16,<8
+ipywidgets

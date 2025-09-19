@@ -1,0 +1,16 @@
+name: ifood-case
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - openjdk=17
+  - numpy=1.26.*
+  - pandas=2.2.*
+  - pyarrow>=14,<19
+  - fastparquet
+  - scipy
+  - jupyterlab
+  - ipykernel
+  - matplotlib
+  - plotly
