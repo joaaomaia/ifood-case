@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="src/logo.png" alt="logotipo" width="820">
+</p>
+
+
 # iFood Case — Oferta Ótima por Cliente (Uplift + Custo)
 
 Este repositório contém o estudo, os modelos e os entregáveis do **Case iFood** para construir uma **política de ofertas por cliente** que **maximiza margem líquida incremental** sob **restrições de custo**. O projeto combina: (i) modelagem de **probabilidade de visualização** (propensão a ver a oferta), (ii) **CATE** (efeito causal condicional) em **margem líquida**, e (iii) uma **regra de decisão** por cliente/oferta que considera **benefício incremental esperado vs. custo**.
@@ -74,9 +79,9 @@ O **Cost Score** resume o **custo esperado por envio** de cada par (cliente, ofe
    - custo **por impressão / por envio** conforme o canal.
 
 **Fórmula simplificada** (por envio, para um cliente *i* e oferta *j*):
-\[
-\text{CostScore}_{i,j} = \mathbb{E}[\text{Incentivo}_{i,j}] \; + \; \mathbb{E}[\text{CustoMídia}_{i,j}]
-\]
+$$
+\text{CostScore}_{i,j} = \mathbb{E}[\text{Incentivo}_{i,j}] + \mathbb{E}[\text{CustoMídia}_{i,j}]
+$$
 
 > No holdout, usamos esse **CostScore** como **linha de base orçamentária** e, nas simulações, como **restrição** para comparar políticas sob o mesmo teto de custo.
 
@@ -96,30 +101,30 @@ Treinamos um modelo de propensão para estimar **p_view = P(View=1 | X, oferta)*
 - **Splits temporais**: treinos por janelas (train/calib/holdout) para evitar *look-ahead*.
 - **Calibração (opcional)**: isotônica/logística se verificada discrepância entre *predicted* e *observed*.
 
-O output é `\hat{p}_{i,j}` para cada par cliente-oferta no holdout.
+O output é $\hat{p}_{i,j}$ para cada par cliente-oferta no holdout.
 
 
 ---
 
 ## 6) CATE em **margem líquida** (efeito causal por cliente)
 
-Estimamos o **efeito causal da visualização** sobre a **margem líquida** (não apenas taxa de conversão), i.e. \\(\tau_i = \mathbb{E}[Y|T=1,X_i] - \mathbb{E}[Y|T=0,X_i]\\), onde:
-- \\(Y\\) = **margem líquida** por envio/ciclo (receita incremental - custos), já **alinhada** ao evento (*view*) e à janela correta;
-- \\(T=1\\) indica **visualização** efetiva.
+Estimamos o **efeito causal da visualização** sobre a **margem líquida** (não apenas taxa de conversão), i.e. $\tau_i = \mathbb{E}[Y \mid T=1, X_i] - \mathbb{E}[Y \mid T=0, X_i]$, onde:
+- $Y$ = **margem líquida** por envio/ciclo (receita incremental - custos), já **alinhada** ao evento (*view*) e à janela correta;
+- $T=1$ indica **visualização** efetiva.
 
 ### Meta-learner adotado: **DR-Learner (Doubly Robust)**
 **Por quê DR?**
 - **Dupla robustez**: consistente se **propensity** (e) **ou** modelos de outcome estiverem corretos;
-- **Estabilidade** sob **seleção não-aleatória** e **overlap** imperfeito (com *trimming* de \\(\hat{e}\\) para [0.02, 0.98], quando necessário);
+- **Estabilidade** sob **seleção não-aleatória** e **overlap** imperfeito (com *trimming* de $\hat{e}$ para [0.02, 0.98], quando necessário);
 - Flexível para **outcome contínuo** (margem líquida) e **alto número de features**;
 - Compatível com **OPE** posterior via SNIPS/DR, usando a mesma escala de *net margin*.
 
 **Detalhes práticos**:
-- Remoção de linhas inválidas (NaN/inf) e *trimming* de **propensity \\(\hat{e}\\)** para garantir **overlap**;
-- *Fallback* constante em *folds* degenerados (quando a variação de \\(Y\\) é nula);
-- Logs de **overlap** e diagnóstico de \\(\hat{e}\\).
+- Remoção de linhas inválidas (NaN/inf) e *trimming* de **propensity $\hat{e}$** para garantir **overlap**;
+- *Fallback* constante em *folds* degenerados (quando a variação de $Y$ é nula);
+- Logs de **overlap** e diagnóstico de $\hat{e}$.
 
-O output é \\(\widehat{\tau}^{\text{view}}_{i,j}\\), gravado como `tau_view_hat`.
+O output é $\widehat{\tau}^{\text{view}}_{i,j}$, gravado como `tau_view_hat`.
 
 
 ---
@@ -128,16 +133,16 @@ O output é \\(\widehat{\tau}^{\text{view}}_{i,j}\\), gravado como `tau_view_hat
 
 Para cada **cliente i** e **oferta j** no holdout, calculamos o **valor incremental esperado por envio**:
 
-\[
-\text{Value}_{i,j} \,=\, \hat{p}_{i,j} \times \widehat{\tau}^{\text{view}}_{i,j} \; - \; \text{CostScore}_{i,j}
-\]
+$$
+\text{Value}_{i,j} = \hat{p}_{i,j} \cdot \widehat{\tau}^{\text{view}}_{i,j} - \text{CostScore}_{i,j}
+$$
 
-- \\(\hat{p}_{i,j}\\): propensão a ver a oferta;
-- \\(\widehat{\tau}^{\text{view}}_{i,j}\\): efeito causal estimado em **margem líquida** condicionado à visualização;
-- \\(\text{CostScore}_{i,j}\\): custo esperado do envio (incentivo + mídia).
+- $\hat{p}_{i,j}$: propensão a ver a oferta;
+- $\widehat{\tau}^{\text{view}}_{i,j}$: efeito causal estimado em **margem líquida** condicionado à visualização;
+- $\text{CostScore}_{i,j}$: custo esperado do envio (incentivo + mídia).
 
 **Política por cliente**:  
-Escolher a **oferta j** que **maximiza** `Value_{i,j}`, respeitando **restrições de orçamento** (somatório de custos por período/campanha) e **safety rules** (ex.: **excluir** ofertas com `Value_{i,j} < 0` ou **thresholds** mínimos de \\(\hat{p}\\) ou \\(\tau\\)).
+Escolher a **oferta j** que **maximiza** `Value_{i,j}`, respeitando **restrições de orçamento** (somatório de custos por período/campanha) e **safety rules** (ex.: **excluir** ofertas com `Value_{i,j} < 0` ou **thresholds** mínimos de $\hat{p}$ ou $\tau$).
 
 > **Hit rate da política**: % de casos onde a oferta selecionada **de fato resulta** em visualização/resultado no holdout.  
 > **Margem por 1.000 envios**: soma de margens realizadas sob a política, escalada por 1.000.
@@ -203,7 +208,7 @@ git lfs pull
 
 ## 11) Notas de implementação
 
-- **Overlaps e trimming**: propensidade \\(\hat{e}\\) foi *trimada* para [0.02, 0.98] quando necessário, garantindo qualidade dos estimadores.
+- **Overlaps e trimming**: propensidade $\hat{e}$ foi *trimada* para [0.02, 0.98] quando necessário, garantindo qualidade dos estimadores.
 - **Fallbacks**: em *folds* com `y` constante, usamos fallback de média para estabilizar meta-learners/estimadores.
 - **Escala de margem**: usamos a **mesma escala** de *net margin* entre modelagem e OPE (alinhamento DR).
 - **Custos no holdout**: **CostScore** define a **linha de base orçamentária** para comparação justa entre cenários/políticas.
@@ -215,7 +220,7 @@ git lfs pull
 
 - Incorporar **canal** explicitamente no *learner* (multi-treatment) ou via dois estágios (oferta → canal).
 - Explorar **policy learning** direto (bandits/POEM/a-learning) com restrições de custo.
-- **Calibração** global de \\(\hat{p}\\) e \\(\hat{\tau}\\) vs. resultados observados por segmento.
+- **Calibração** global de $\hat{p}$ e $\hat{\tau}$ vs. resultados observados por segmento.
 - Aumentar robustez com **cross-fitting** e inferência com **bootstrap** (CIs de *value uplift*).
 
 
